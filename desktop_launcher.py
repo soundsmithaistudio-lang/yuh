@@ -19,7 +19,7 @@ import uvicorn
 
 def get_app_directory():
     """Get the directory where the application files are located.
-    
+
     When running as a PyInstaller bundle, this will be the temporary directory
     where files are extracted. When running as a script, it's the parent directory.
     """
@@ -28,7 +28,7 @@ def get_app_directory():
         return Path(sys._MEIPASS)
     else:
         # Running as script
-        return Path(__file__).parent.parent
+        return Path(__file__).resolve().parent
 
 
 def start_server():
