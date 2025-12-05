@@ -1,6 +1,7 @@
 // Lambeck AI - ChatGPT Style Interface
 
 // Global State
+const apiBase = '/api';
 let currentModel = null;
 let recognition = null;
 let isListening = false;
@@ -12,15 +13,18 @@ let soundEffects = true;
 let autoScroll = true;
 let messageCount = 0;
 let chatHistory = [];
+let conversations = [];
+let activeConversationId = null;
+let conversationBranches = {};
 let speechSynthesis = window.speechSynthesis;
 let currentVoice = null;
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+document.addEventListener('DOMContentLoaded', async function() {
+    await initializeApp();
 });
 
-function initializeApp() {
+async function initializeApp() {
     // Set initial theme
     document.documentElement.setAttribute('data-theme', currentTheme);
     
@@ -32,10 +36,11 @@ function initializeApp() {
     setupParticleSystem();
     setupNeuralNetwork();
     updateUI();
-    
+
     // Load saved settings
-    loadSettings();
-    
+    await loadSettings();
+    await bootstrapConversationSync();
+
     // Show welcome animation
     showWelcomeAnimation();
 }
@@ -243,6 +248,8 @@ function addToTranscript(speaker, text) {
         transcriptContent.appendChild(entry);
         transcriptContent.scrollTop = transcriptContent.scrollHeight;
     }
+
+    queueMicrotask(() => persistTranscriptToServer(speaker, text));
 }
 
 // Voice Input Functions
@@ -395,6 +402,8 @@ function addMessage(sender, text) {
     if (welcomeMessage) {
         welcomeMessage.style.display = 'none';
     }
+
+    queueMicrotask(() => persistMessageToServer(sender, text));
 }
 
 function scrollToBottom() {
@@ -415,6 +424,120 @@ function updateResponseTime(time) {
     const responseTimeEl = document.getElementById('response-time');
     if (responseTimeEl) {
         responseTimeEl.textContent = `${time}ms`;
+    }
+}
+
+// Backend Sync Helpers
+async function bootstrapConversationSync() {
+    try {
+        await refreshConversationList();
+        if (!activeConversationId) {
+            const created = await createConversationOnServer('New Conversation');
+            activeConversationId = created ? created.id : null;
+        }
+        updateConversationIndicator();
+    } catch (error) {
+        console.warn('Unable to bootstrap conversation sync', error);
+    }
+}
+
+async function refreshConversationList() {
+    try {
+        const response = await fetch(`${apiBase}/conversations`);
+        if (!response.ok) return;
+        conversations = await response.json();
+        conversationBranches = conversations.reduce((branches, convo) => {
+            if (!convo.parent_id) return branches;
+            if (!branches[convo.parent_id]) branches[convo.parent_id] = [];
+            branches[convo.parent_id].push(convo.id);
+            return branches;
+        }, {});
+        if (conversations.length > 0 && !activeConversationId) {
+            activeConversationId = conversations[0].id;
+        }
+        updateConversationIndicator();
+    } catch (error) {
+        console.warn('Unable to refresh conversations', error);
+    }
+}
+
+function updateConversationIndicator() {
+    const indicator = document.querySelector('.model-indicator');
+    if (!indicator) return;
+
+    let badge = document.getElementById('conversation-status');
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'conversation-status';
+        badge.className = 'conversation-status';
+        badge.style.marginLeft = '12px';
+        badge.style.fontSize = '12px';
+        badge.style.opacity = '0.8';
+        indicator.appendChild(badge);
+    }
+
+    const active = conversations.find(c => c.id === activeConversationId);
+    badge.textContent = active ? `Conversation: ${active.title}` : 'Conversation: none';
+}
+
+async function ensureActiveConversation(parentId = null) {
+    if (activeConversationId) return activeConversationId;
+    const created = await createConversationOnServer('New Conversation', parentId);
+    activeConversationId = created ? created.id : null;
+    updateConversationIndicator();
+    return activeConversationId;
+}
+
+async function createConversationOnServer(title, parentId = null) {
+    try {
+        const response = await fetch(`${apiBase}/conversations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ title, parent_id: parentId || null })
+        });
+
+        if (!response.ok) throw new Error('Failed to create conversation');
+        const data = await response.json();
+        conversations.unshift(data);
+        updateConversationIndicator();
+        return data;
+    } catch (error) {
+        console.warn('Unable to create conversation', error);
+        return null;
+    }
+}
+
+async function persistMessageToServer(sender, content, parentMessageId = null) {
+    try {
+        const conversationId = await ensureActiveConversation();
+        if (!conversationId) return;
+        await fetch(`${apiBase}/conversations/${conversationId}/messages`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sender, content, parent_message_id: parentMessageId })
+        });
+    } catch (error) {
+        console.warn('Unable to persist message', error);
+    }
+}
+
+async function persistTranscriptToServer(speaker, content) {
+    try {
+        const conversationId = await ensureActiveConversation();
+        if (!conversationId) return;
+        await fetch(`${apiBase}/conversations/${conversationId}/transcripts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ speaker, content })
+        });
+    } catch (error) {
+        console.warn('Unable to persist transcript', error);
     }
 }
 
@@ -485,9 +608,10 @@ function saveSettings() {
         autoScroll
     };
     localStorage.setItem('lambeck-ai-settings', JSON.stringify(settings));
+    syncSettingsWithBackend(settings);
 }
 
-function loadSettings() {
+async function loadSettings() {
     const saved = localStorage.getItem('lambeck-ai-settings');
     if (saved) {
         const settings = JSON.parse(saved);
@@ -512,6 +636,41 @@ function loadSettings() {
         }
         updateThemeIcon();
     }
+
+    await loadBackendSettings();
+}
+
+async function loadBackendSettings() {
+    try {
+        const response = await fetch(`${apiBase}/settings`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data.values) {
+            currentTheme = data.values.theme || currentTheme;
+            voiceOutput = data.values.voiceOutput !== undefined ? data.values.voiceOutput : voiceOutput;
+            soundEffects = data.values.soundEffects !== undefined ? data.values.soundEffects : soundEffects;
+            autoScroll = data.values.autoScroll !== undefined ? data.values.autoScroll : autoScroll;
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            updateThemeIcon();
+        }
+    } catch (error) {
+        console.warn('Unable to load settings from backend', error);
+    }
+}
+
+async function syncSettingsWithBackend(settings) {
+    try {
+        await fetch(`${apiBase}/settings`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ values: settings })
+        });
+    } catch (error) {
+        console.warn('Unable to sync settings to backend', error);
+    }
 }
 
 // Utility Functions
@@ -523,6 +682,10 @@ function clearChat() {
     
     messageCount = 0;
     updateMessageCount();
+
+    activeConversationId = null;
+    ensureActiveConversation();
+    updateConversationIndicator();
     
     // Show welcome message again
     const welcomeMessage = document.querySelector('.welcome-message');
@@ -533,31 +696,69 @@ function clearChat() {
     showToast('Chat cleared', 'info');
 }
 
-function exportChat() {
-    const messages = document.querySelectorAll('.message');
-    let chatText = 'Lambeck AI Chat Export\n';
-    chatText += '========================\n\n';
-    
-    messages.forEach(message => {
-        const sender = message.classList.contains('user') ? 'You' : 
-                     message.classList.contains('ai') ? 'AI' : 'System';
-        const text = message.querySelector('.message-text').textContent;
-        const time = message.querySelector('.message-time').textContent;
-        
-        chatText += `[${time}] ${sender}: ${text}\n\n`;
+async function exportChat() {
+    try {
+        const conversationId = await ensureActiveConversation();
+        if (!conversationId) {
+            showToast('No conversation available to export', 'error');
+            return;
+        }
+
+        const response = await fetch(`${apiBase}/conversations/${conversationId}/export`);
+        if (!response.ok) throw new Error('Export failed');
+
+        const data = await response.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `conversation-${conversationId}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('Conversation exported', 'success');
+    } catch (error) {
+        console.warn('Export failed', error);
+        showToast('Failed to export conversation', 'error');
+    }
+}
+
+async function importConversationFromFile(file) {
+    try {
+        const text = await file.text();
+        const payload = JSON.parse(text);
+        const response = await fetch(`${apiBase}/conversations/import`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error('Import failed');
+        const conversation = await response.json();
+        activeConversationId = conversation.id;
+        await refreshConversationList();
+        showToast('Conversation imported', 'success');
+    } catch (error) {
+        console.warn('Import failed', error);
+        showToast('Failed to import conversation', 'error');
+    }
+}
+
+function promptConversationImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            await importConversationFromFile(file);
+        }
     });
-    
-    const blob = new Blob([chatText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `lambeck-chat-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showToast('Chat exported', 'success');
+    input.click();
 }
 
 function useQuickPrompt(prompt) {
@@ -1183,7 +1384,17 @@ function openModelAnalytics() {
 }
 
 function openConversationBranching() {
-    showToast('Conversation branching feature coming soon!', 'info');
+    const title = prompt('Name your new conversation branch:');
+    if (!title) return;
+
+    ensureActiveConversation().then(async (parentId) => {
+        const branch = await createConversationOnServer(title, parentId);
+        if (branch) {
+            activeConversationId = branch.id;
+            await refreshConversationList();
+            showToast('Branch created and selected', 'success');
+        }
+    });
 }
 
 function openMemoryManagement() {
@@ -1195,7 +1406,9 @@ function openContextAnalysis() {
 }
 
 function openConversationExport() {
-    showToast('Export/Import system coming soon!', 'info');
+    exportChat();
+    showToast('Export created. Select a file to import another conversation.', 'info');
+    promptConversationImport();
 }
 
 function openPromptTemplates() {
