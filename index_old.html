@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lambeck LLM Studio</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <i class="fas fa-moon" id="theme-icon"></i>
+    </div>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="settings-header">
+            <h3><i class="fas fa-cog"></i> Settings</h3>
+            <button class="close-settings" onclick="toggleSettings()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="settings-content">
+            <div class="setting-group">
+                <label>Theme</label>
+                <select id="theme-select" onchange="changeTheme(this.value)">
+                    <option value="dark">Dark</option>
+                    <option value="light">Light</option>
+                    <option value="auto">Auto</option>
+                </select>
+            </div>
+            <div class="setting-group">
+                <label>Animation Speed</label>
+                <input type="range" id="animation-speed" min="0.5" max="2" step="0.1" value="1" onchange="setAnimationSpeed(this.value)">
+            </div>
+            <div class="setting-group">
+                <label>Auto-scroll Chat</label>
+                <input type="checkbox" id="auto-scroll" checked onchange="toggleAutoScroll(this.checked)">
+            </div>
+            <div class="setting-group">
+                <label>Sound Effects</label>
+                <input type="checkbox" id="sound-effects" checked onchange="toggleSoundEffects(this.checked)">
+            </div>
+            <div class="setting-group">
+                <label>Voice Output (AI Speaks)</label>
+                <input type="checkbox" id="voice-output" checked onchange="toggleVoiceOutput(this.checked)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>Lambeck</h1>
+                        <span>LLM Studio</span>
+                    </div>
+                </div>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-section="chat">
+                    <i class="fas fa-comments"></i>
+                    <span>Chat</span>
+                </a>
+                <a href="#" class="nav-item" data-section="models">
+                    <i class="fas fa-brain"></i>
+                    <span>Models</span>
+                </a>
+                <a href="#" class="nav-item" data-section="history">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </a>
+                <a href="#" class="nav-item" data-section="analytics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button class="settings-btn" onclick="toggleSettings()">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-left">
+                    <h2 id="section-title">Chat Interface</h2>
+                    <div class="breadcrumb">
+                        <span>Home</span>
+                        <i class="fas fa-chevron-right"></i>
+                        <span id="breadcrumb-current">Chat</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="model-status-header">
+                        <div class="status-indicator" id="model-status-indicator"></div>
+                        <span id="header-model-name">{{ current_model or "No model loaded" }}</span>
+                    </div>
+                    <div class="header-actions">
+                        <button class="header-btn" onclick="showNotifications()" title="Notifications">
+                            <i class="fas fa-bell"></i>
+                            <span class="notification-badge" id="notification-count">0</span>
+                        </button>
+                        <button class="header-btn" onclick="toggleFullscreen()" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Sections -->
+            <div class="content-wrapper">
+                <!-- Chat Section -->
+                <section class="content-section active" id="chat-section">
+                    <div class="chat-layout">
+                        <div class="chat-main">
+                            <div class="chat-container">
+                                <div class="chat-messages" id="chat-messages">
+                                    <div class="message-group">
+                                        <div class="message system-message">
+                                            <div class="message-avatar">
+                                                <i class="fas fa-robot"></i>
+                                            </div>
+                                            <div class="message-content">
+                                                <div class="message-header">
+                                                    <span class="message-sender">System</span>
+                                                    <span class="message-time">{{ current_time }}</span>
+                                                </div>
+                                                <div class="message-text">
+                                                    Welcome to Lambeck LLM Studio! Load a model to start chatting.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="typing-indicator" id="typing-indicator" style="display: none;">
+                                    <div class="typing-dots">
+                                        <span></span>
+                                        <span></span>
+                                        <span></span>
+                                    </div>
+                                    <span>AI is typing...</span>
+                                </div>
+                            </div>
+
+                            <div class="chat-input-area">
+                                <div class="input-container">
+                                    <div class="input-wrapper">
+                                        <textarea id="message-input" 
+                                                placeholder="Type your message here..." 
+                                                rows="1" 
+                                                disabled></textarea>
+                                        <div class="input-actions">
+                                            <button class="input-btn" onclick="attachFile()" title="Attach File" disabled>
+                                                <i class="fas fa-paperclip"></i>
+                                            </button>
+                                            <button class="input-btn" onclick="startVoiceInput()" id="voice-btn" title="Voice Input" disabled>
+                                                <i class="fas fa-microphone"></i>
+                                            </button>
+                                            <button class="send-btn" onclick="sendMessage()" id="send-btn" disabled>
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="input-footer">
+                                        <div class="input-stats">
+                                            <span id="char-count">0</span> characters
+                                        </div>
+                                        <div class="quick-actions">
+                                            <button class="quick-btn" onclick="clearChat()">
+                                                <i class="fas fa-trash"></i> Clear
+                                            </button>
+                                            <button class="quick-btn" onclick="exportChat()">
+                                                <i class="fas fa-download"></i> Export
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-sidebar">
+                            <div class="chat-info">
+                                <h3>Chat Information</h3>
+                                <div class="info-item">
+                                    <span class="info-label">Messages:</span>
+                                    <span class="info-value" id="message-count">0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Tokens:</span>
+                                    <span class="info-value" id="token-count">0</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Response Time:</span>
+                                    <span class="info-value" id="response-time">-</span>
+                                </div>
+                            </div>
+
+                            <div class="quick-prompts">
+                                <h3>Quick Prompts</h3>
+                                <div class="prompt-list">
+                                    <button class="prompt-btn" onclick="usePrompt('Explain this concept in simple terms')">
+                                        <i class="fas fa-lightbulb"></i>
+                                        Explain Simply
+                                    </button>
+                                    <button class="prompt-btn" onclick="usePrompt('Write a summary of')">
+                                        <i class="fas fa-file-text"></i>
+                                        Summarize
+                                    </button>
+                                    <button class="prompt-btn" onclick="usePrompt('Help me debug this code')">
+                                        <i class="fas fa-bug"></i>
+                                        Debug Code
+                                    </button>
+                                    <button class="prompt-btn" onclick="usePrompt('Translate this to')">
+                                        <i class="fas fa-language"></i>
+                                        Translate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Models Section -->
+                <section class="content-section" id="models-section">
+                    <div class="models-layout">
+                        <div class="models-header">
+                            <h3>Model Management</h3>
+                            <div class="models-actions">
+                                <button class="btn btn-secondary" onclick="refreshModels()">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                                <button class="btn btn-primary" onclick="uploadModel()">
+                                    <i class="fas fa-upload"></i> Upload Model
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="current-model-card">
+                            <div class="model-card-header">
+                                <h4>Currently Loaded Model</h4>
+                                <div class="model-status">
+                                    <div class="status-dot active" id="current-model-status"></div>
+                                    <span>Active</span>
+                                </div>
+                            </div>
+                            <div class="model-card-content">
+                                <div class="model-info">
+                                    <div class="model-name" id="current-model-display">
+                                        {{ current_model or "No model loaded" }}
+                                    </div>
+                                    <div class="model-details">
+                                        <span class="detail-item">
+                                            <i class="fas fa-memory"></i>
+                                            <span id="model-memory">-</span>
+                                        </span>
+                                        <span class="detail-item">
+                                            <i class="fas fa-clock"></i>
+                                            <span id="model-load-time">-</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="model-actions">
+                                    <button class="btn btn-danger" onclick="unloadModel()" id="unload-btn" disabled>
+                                        <i class="fas fa-power-off"></i> Unload
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="models-grid">
+                            {% if models %}
+                                {% for model in models %}
+                                <div class="model-card" data-model="{{ model }}">
+                                    <div class="model-card-header">
+                                        <div class="model-icon">
+                                            <i class="fas fa-brain"></i>
+                                        </div>
+                                        <div class="model-card-actions">
+                                            <button class="card-action-btn" onclick="showModelInfo('{{ model }}')" title="Info">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
+                                            <button class="card-action-btn" onclick="deleteModel('{{ model }}')" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="model-card-content">
+                                        <h4 class="model-title">{{ model }}</h4>
+                                        <div class="model-meta">
+                                            <span class="meta-item">
+                                                <i class="fas fa-file"></i>
+                                                {{ model.split('.')[-1].upper() }}
+                                            </span>
+                                            <span class="meta-item">
+                                                <i class="fas fa-hdd"></i>
+                                                <span class="model-size" data-model="{{ model }}">-</span>
+                                            </span>
+                                        </div>
+                                        <div class="model-card-footer">
+                                            <button class="btn btn-primary btn-sm" onclick="loadModel('{{ model }}')">
+                                                <i class="fas fa-play"></i> Load
+                                            </button>
+                                            <button class="btn btn-secondary btn-sm" onclick="ablateModel('{{ model }}')">
+                                                <i class="fas fa-copy"></i> Ablate
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="empty-state">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-brain"></i>
+                                    </div>
+                                    <h3>No Models Found</h3>
+                                    <p>Upload or place model files (.gguf, .bin, .pth) in the models directory to get started.</p>
+                                    <button class="btn btn-primary" onclick="uploadModel()">
+                                        <i class="fas fa-upload"></i> Upload Your First Model
+                                    </button>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <!-- History Section -->
+                <section class="content-section" id="history-section">
+                    <div class="history-layout">
+                        <div class="history-header">
+                            <h3>Chat History</h3>
+                            <div class="history-actions">
+                                <button class="btn btn-secondary" onclick="clearHistory()">
+                                    <i class="fas fa-trash"></i> Clear All
+                                </button>
+                                <button class="btn btn-primary" onclick="exportHistory()">
+                                    <i class="fas fa-download"></i> Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="history-content">
+                            <div class="empty-state">
+                                <div class="empty-icon">
+                                    <i class="fas fa-history"></i>
+                                </div>
+                                <h3>No Chat History</h3>
+                                <p>Your conversation history will appear here.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Analytics Section -->
+                <section class="content-section" id="analytics-section">
+                    <div class="analytics-layout">
+                        <div class="analytics-header">
+                            <h3>Usage Analytics</h3>
+                        </div>
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <div class="analytics-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <div class="analytics-content">
+                                    <h4>Total Messages</h4>
+                                    <div class="analytics-value">0</div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <div class="analytics-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="analytics-content">
+                                    <h4>Avg Response Time</h4>
+                                    <div class="analytics-value">-</div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <div class="analytics-icon">
+                                    <i class="fas fa-brain"></i>
+                                </div>
+                                <div class="analytics-content">
+                                    <h4>Models Used</h4>
+                                    <div class="analytics-value">0</div>
+                                </div>
+                            </div>
+                            <div class="analytics-card">
+                                <div class="analytics-icon">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                <div class="analytics-content">
+                                    <h4>Sessions Today</h4>
+                                    <div class="analytics-value">1</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals and Overlays -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal()"></div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p id="loading-text">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Voice Controls -->
+    <div class="voice-controls-modal" id="voice-controls" style="display: none;">
+        <div class="voice-content">
+            <div class="voice-animation">
+                <div class="voice-circle"></div>
+                <div class="voice-circle"></div>
+                <div class="voice-circle"></div>
+            </div>
+            <h3>Listening...</h3>
+            <p>Speak now, I'm listening!</p>
+            <button class="btn btn-danger" onclick="stopVoiceInput()">
+                <i class="fas fa-stop"></i> Stop Recording
+            </button>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

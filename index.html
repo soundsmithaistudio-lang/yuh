@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lambeck AI</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Main App Container -->
+    <div class="app">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h1>Lambeck AI</h1>
+                </div>
+                
+                <div class="header-actions">
+                    <div class="model-indicator">
+                        <div class="status-dot active"></div>
+                        <span id="current-model">test_model.gguf</span>
+                    </div>
+                    
+                    <button class="header-btn" onclick="toggleAdvancedSidebar()" title="Advanced Settings">
+                        <i class="fas fa-brain"></i>
+                    </button>
+                    
+                    <button class="header-btn" onclick="toggleModelComparison()" title="Multi-Model Comparison">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                    
+                    <button class="header-btn" onclick="togglePerformanceAnalytics()" title="Performance Analytics">
+                        <i class="fas fa-chart-line"></i>
+                    </button>
+                    
+                    <button class="header-btn theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- REVOLUTIONARY ADVANCED SIDEBAR -->
+        <div class="advanced-sidebar" id="advanced-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">
+                    <i class="fas fa-rocket"></i>
+                    <span>Advanced Control Center</span>
+                </div>
+                <button class="sidebar-close" onclick="toggleAdvancedSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Model Management Section -->
+                <div class="sidebar-section">
+                    <div class="section-header" onclick="toggleSection('model-management')">
+                        <i class="fas fa-brain"></i>
+                        <span>Model Management</span>
+                        <i class="fas fa-chevron-down section-arrow"></i>
+                    </div>
+                    <div class="section-content" id="model-management">
+                        <div class="model-controls">
+                            <button class="advanced-btn" onclick="openModelAblation()">
+                                <i class="fas fa-unlock"></i>
+                                <span>Model Ablation (Uncensor)</span>
+                            </button>
+                            <button class="advanced-btn" onclick="openModelComparison()">
+                                <i class="fas fa-layer-group"></i>
+                                <span>Multi-Model Comparison</span>
+                            </button>
+                            <button class="advanced-btn" onclick="openModelTraining()">
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>Real-time Fine-tuning</span>
+                            </button>
+                            <button class="advanced-btn" onclick="openModelAnalytics()">
+                                <i class="fas fa-chart-pie"></i>
+                                <span>Performance Analytics</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conversation Management -->
+                <div class="sidebar-section">
+                    <div class="section-header" onclick="toggleSection('conversation-management')">
+                        <i class="fas fa-comments"></i>
+                        <span>Conversation Control</span>
+                        <i class="fas fa-chevron-down section-arrow"></i>
+                    </div>
+                    <div class="section-content" id="conversation-management">
+                        <button class="advanced-btn" onclick="openConversationBranching()">
+                            <i class="fas fa-code-branch"></i>
+                            <span>Conversation Branching</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openMemoryManagement()">
+                            <i class="fas fa-memory"></i>
+                            <span>Memory Management</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openContextAnalysis()">
+                            <i class="fas fa-search"></i>
+                            <span>Context Analysis</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openConversationExport()">
+                            <i class="fas fa-download"></i>
+                            <span>Export/Import</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Prompt Engineering -->
+                <div class="sidebar-section">
+                    <div class="section-header" onclick="toggleSection('prompt-engineering')">
+                        <i class="fas fa-magic"></i>
+                        <span>Prompt Engineering</span>
+                        <i class="fas fa-chevron-down section-arrow"></i>
+                    </div>
+                    <div class="section-content" id="prompt-engineering">
+                        <button class="advanced-btn" onclick="openPromptTemplates()">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Advanced Templates</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openPersonalityInjection()">
+                            <i class="fas fa-user-cog"></i>
+                            <span>Personality Injection</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openPromptOptimizer()">
+                            <i class="fas fa-rocket"></i>
+                            <span>Prompt Optimizer</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openChainOfThought()">
+                            <i class="fas fa-link"></i>
+                            <span>Chain-of-Thought</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Voice & Audio -->
+                <div class="sidebar-section">
+                    <div class="section-header" onclick="toggleSection('voice-audio')">
+                        <i class="fas fa-microphone"></i>
+                        <span>Voice & Audio</span>
+                        <i class="fas fa-chevron-down section-arrow"></i>
+                    </div>
+                    <div class="section-content" id="voice-audio">
+                        <button class="advanced-btn" onclick="openEmotionDetection()">
+                            <i class="fas fa-heart"></i>
+                            <span>Emotion Detection</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openVoiceCloning()">
+                            <i class="fas fa-clone"></i>
+                            <span>Voice Cloning</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openAudioAnalysis()">
+                            <i class="fas fa-waveform"></i>
+                            <span>Audio Analysis</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openRealTimeTranscription()">
+                            <i class="fas fa-closed-captioning"></i>
+                            <span>Real-time Transcription</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Customization -->
+                <div class="sidebar-section">
+                    <div class="section-header" onclick="toggleSection('customization')">
+                        <i class="fas fa-palette"></i>
+                        <span>Customization</span>
+                        <i class="fas fa-chevron-down section-arrow"></i>
+                    </div>
+                    <div class="section-content" id="customization">
+                        <button class="advanced-btn" onclick="openThemeDesigner()">
+                            <i class="fas fa-paint-brush"></i>
+                            <span>Theme Designer</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openUIPersonalization()">
+                            <i class="fas fa-cogs"></i>
+                            <span>UI Personalization</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openPluginManager()">
+                            <i class="fas fa-puzzle-piece"></i>
+                            <span>Plugin Manager</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openAdvancedSettings()">
+                            <i class="fas fa-sliders-h"></i>
+                            <span>Advanced Settings</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Security & Privacy -->
+                <div class="sidebar-section">
+                    <div class="section-header" onclick="toggleSection('security-privacy')">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Security & Privacy</span>
+                        <i class="fas fa-chevron-down section-arrow"></i>
+                    </div>
+                    <div class="section-content" id="security-privacy">
+                        <button class="advanced-btn" onclick="openEncryptionSettings()">
+                            <i class="fas fa-lock"></i>
+                            <span>Encryption Settings</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openPrivacyControls()">
+                            <i class="fas fa-user-secret"></i>
+                            <span>Privacy Controls</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openDataManagement()">
+                            <i class="fas fa-database"></i>
+                            <span>Data Management</span>
+                        </button>
+                        <button class="advanced-btn" onclick="openAuditLogs()">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span>Audit Logs</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Model Ablation Modal -->
+        <div class="modal" id="model-ablation-modal">
+            <div class="modal-content advanced-modal">
+                <div class="modal-header">
+                    <h3><i class="fas fa-unlock"></i> Model Ablation & Uncensoring</h3>
+                    <button class="modal-close" onclick="closeModal('model-ablation-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="ablation-controls">
+                        <div class="control-group">
+                            <label>Censorship Removal Level</label>
+                            <div class="slider-container">
+                                <input type="range" id="censorship-level" min="0" max="100" value="0" class="advanced-slider">
+                                <div class="slider-labels">
+                                    <span>Safe</span>
+                                    <span>Moderate</span>
+                                    <span>Unrestricted</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label>Safety Filter Bypass</label>
+                            <div class="toggle-switches">
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="bypass-content-filter">
+                                    <label for="bypass-content-filter">Content Filter</label>
+                                </div>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="bypass-ethical-constraints">
+                                    <label for="bypass-ethical-constraints">Ethical Constraints</label>
+                                </div>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="bypass-refusal-training">
+                                    <label for="bypass-refusal-training">Refusal Training</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <label>Advanced Ablation Techniques</label>
+                            <select id="ablation-method" class="advanced-select">
+                                <option value="layer-removal">Layer Removal</option>
+                                <option value="attention-masking">Attention Masking</option>
+                                <option value="weight-modification">Weight Modification</option>
+                                <option value="activation-steering">Activation Steering</option>
+                                <option value="gradient-ascent">Gradient Ascent</option>
+                            </select>
+                        </div>
+
+                        <div class="warning-box">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Warning: Model ablation may produce unfiltered content. Use responsibly.</p>
+                        </div>
+
+                        <button class="advanced-btn primary" onclick="applyAblation()">
+                            <i class="fas fa-magic"></i>
+                            Apply Ablation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Multi-Model Comparison Modal -->
+        <div class="modal" id="model-comparison-modal">
+            <div class="modal-content advanced-modal large">
+                <div class="modal-header">
+                    <h3><i class="fas fa-layer-group"></i> Multi-Model Comparison</h3>
+                    <button class="modal-close" onclick="closeModal('model-comparison-modal')">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="comparison-setup">
+                        <div class="model-selector">
+                            <label>Select Models to Compare</label>
+                            <div class="model-grid">
+                                <div class="model-card">
+                                    <input type="checkbox" id="model-1" checked>
+                                    <label for="model-1">GPT-4 Turbo</label>
+                                </div>
+                                <div class="model-card">
+                                    <input type="checkbox" id="model-2">
+                                    <label for="model-2">Claude 3 Opus</label>
+                                </div>
+                                <div class="model-card">
+                                    <input type="checkbox" id="model-3">
+                                    <label for="model-3">Llama 2 70B</label>
+                                </div>
+                                <div class="model-card">
+                                    <input type="checkbox" id="model-4">
+                                    <label for="model-4">Mixtral 8x7B</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="comparison-metrics">
+                            <label>Comparison Metrics</label>
+                            <div class="metrics-grid">
+                                <div class="metric-toggle">
+                                    <input type="checkbox" id="response-quality" checked>
+                                    <label for="response-quality">Response Quality</label>
+                                </div>
+                                <div class="metric-toggle">
+                                    <input type="checkbox" id="response-speed" checked>
+                                    <label for="response-speed">Response Speed</label>
+                                </div>
+                                <div class="metric-toggle">
+                                    <input type="checkbox" id="creativity-score">
+                                    <label for="creativity-score">Creativity Score</label>
+                                </div>
+                                <div class="metric-toggle">
+                                    <input type="checkbox" id="factual-accuracy">
+                                    <label for="factual-accuracy">Factual Accuracy</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="advanced-btn primary" onclick="startComparison()">
+                            <i class="fas fa-play"></i>
+                            Start Comparison
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Container -->
+        <main class="chat-container">
+            <div class="chat-wrapper">
+                <!-- Chat Messages -->
+                <div class="messages-container" id="messages-container">
+                    <div class="welcome-message">
+                        <div class="welcome-icon">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h2>Welcome to Lambeck AI</h2>
+                        <p>Start a conversation or use the call button for voice chat</p>
+                    </div>
+                    
+                    <div class="messages" id="chat-messages">
+                        <!-- Messages will be added here -->
+                    </div>
+                </div>
+
+                <!-- Chat Input -->
+                <div class="chat-input-section">
+                    <!-- Voice Call Button -->
+                    <div class="voice-call-container">
+                        <button id="voice-call-btn" class="voice-call-btn" onclick="toggleVoiceCall()">
+                            <div class="call-icon">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <span class="call-text">Start Voice Call</span>
+                        </button>
+                    </div>
+
+                    <!-- Text Input -->
+                    <div class="input-container">
+                        <div class="input-wrapper">
+                            <textarea 
+                                id="message-input" 
+                                placeholder="Message Lambeck AI..." 
+                                rows="1"
+                                maxlength="4000"
+                            ></textarea>
+                            
+                            <div class="input-actions">
+                                <button id="voice-btn" class="input-btn" onclick="toggleVoiceInput()" title="Voice Input">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                                
+                                <button id="send-btn" class="input-btn send-btn" onclick="sendMessage()" title="Send Message">
+                                    <i class="fas fa-arrow-up"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="input-footer">
+                            <div class="char-count">
+                                <span id="char-count">0</span>/4000
+                            </div>
+                            
+                            <div class="quick-actions">
+                                <button class="quick-btn" onclick="clearChat()" title="Clear Chat">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <button class="quick-btn" onclick="exportChat()" title="Export Chat">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Sidebar (Hidden by default, slides in when needed) -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Chat Options</h3>
+                <button class="close-sidebar" onclick="closeSidebar()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="chat-stats">
+                    <h4>Current Session</h4>
+                    <div class="stat-item">
+                        <span>Messages:</span>
+                        <span id="message-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Response Time:</span>
+                        <span id="response-time">-</span>
+                    </div>
+                </div>
+                
+                <div class="quick-prompts">
+                    <h4>Quick Prompts</h4>
+                    <button class="prompt-btn" onclick="useQuickPrompt('Explain this simply')">
+                        <i class="fas fa-lightbulb"></i>
+                        Explain Simply
+                    </button>
+                    <button class="prompt-btn" onclick="useQuickPrompt('Summarize this')">
+                        <i class="fas fa-file-text"></i>
+                        Summarize
+                    </button>
+                    <button class="prompt-btn" onclick="useQuickPrompt('Help me code')">
+                        <i class="fas fa-code"></i>
+                        Code Help
+                    </button>
+                </div>
+                
+                <div class="model-management">
+                    <h4>Models</h4>
+                    <div class="current-model-info">
+                        <div class="model-name">test_model.gguf</div>
+                        <div class="model-status active">Active</div>
+                    </div>
+                    <button class="model-btn" onclick="showModelSelector()">
+                        <i class="fas fa-brain"></i>
+                        Change Model
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button class="close-btn" onclick="closeSettings()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label>Theme</label>
+                    <select id="theme-select" onchange="changeTheme(this.value)">
+                        <option value="dark">Dark</option>
+                        <option value="light">Light</option>
+                        <option value="auto">Auto</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>Voice Output</label>
+                    <input type="checkbox" id="voice-output" checked onchange="toggleVoiceOutput(this.checked)">
+                </div>
+                <div class="setting-group">
+                    <label>Sound Effects</label>
+                    <input type="checkbox" id="sound-effects" checked onchange="toggleSoundEffects(this.checked)">
+                </div>
+                <div class="setting-group">
+                    <label>Auto-scroll Chat</label>
+                    <input type="checkbox" id="auto-scroll" checked onchange="toggleAutoScroll(this.checked)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Voice Call Overlay -->
+    <div id="voice-call-overlay" class="voice-call-overlay">
+        <div class="call-interface">
+            <div class="call-avatar">
+                <i class="fas fa-brain"></i>
+            </div>
+            <h2>Voice Call with Lambeck AI</h2>
+            <div class="call-status" id="call-status">Connecting...</div>
+            
+            <div class="call-controls">
+                <button class="call-control-btn mute-btn" onclick="toggleMute()" title="Mute">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="call-control-btn end-call-btn" onclick="endVoiceCall()" title="End Call">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
+                <button class="call-control-btn speaker-btn" onclick="toggleSpeaker()" title="Speaker">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+            
+            <div class="call-transcript" id="call-transcript">
+                <div class="transcript-header">Live Transcript</div>
+                <div class="transcript-content" id="transcript-content">
+                    <!-- Transcript will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Loading Indicator -->
+    <div id="loading-indicator" class="loading-indicator">
+        <div class="loading-spinner"></div>
+        <span>Thinking...</span>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
