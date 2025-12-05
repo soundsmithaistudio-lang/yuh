@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeApp() {
     // Set initial theme
     document.documentElement.setAttribute('data-theme', currentTheme);
+
+    // Sync initial model indicator
+    syncCurrentModel();
     
     // Initialize components
     setupVoiceRecognition();
@@ -415,6 +418,55 @@ function updateResponseTime(time) {
     const responseTimeEl = document.getElementById('response-time');
     if (responseTimeEl) {
         responseTimeEl.textContent = `${time}ms`;
+    }
+}
+
+async function apiRequest(url, options = {}) {
+    const mergedOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        },
+        ...options
+    };
+
+    const response = await fetch(url, mergedOptions);
+    if (!response.ok) {
+        const message = await response.text();
+        throw new Error(message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+}
+
+function setButtonLoading(button, isLoading, loadingText = 'Working...') {
+    if (!button) return;
+
+    if (isLoading) {
+        button.dataset.originalContent = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>${loadingText}</span>`;
+    } else {
+        if (button.dataset.originalContent) {
+            button.innerHTML = button.dataset.originalContent;
+        }
+        button.disabled = false;
+    }
+}
+
+function updateModelIndicator(modelName, ablated = false) {
+    const indicator = document.getElementById('current-model');
+    if (indicator) {
+        indicator.textContent = ablated ? `${modelName} (Ablated)` : modelName;
+        indicator.style.color = ablated ? 'var(--neon-pink)' : '';
+    }
+    currentModel = modelName;
+}
+
+function syncCurrentModel() {
+    const indicator = document.getElementById('current-model');
+    if (indicator) {
+        currentModel = indicator.textContent.trim();
     }
 }
 
@@ -953,9 +1005,58 @@ function createSidebarParticles() {
 }
 
 // Model Ablation System
-function openModelAblation() {
+async function loadModelPrompt(button) {
+    const modelName = prompt('Enter the model file to load', currentModel || 'test_model.gguf');
+    if (!modelName) return;
+
+    try {
+        setButtonLoading(button, true, 'Loading model...');
+        const data = await apiRequest('/api/models/load', {
+            method: 'POST',
+            body: JSON.stringify({ model: modelName })
+        });
+
+        updateModelIndicator(data.model, false);
+        addMessage('system', data.message || `Loaded model ${data.model}`);
+        showToast('Model loaded', 'success');
+    } catch (error) {
+        console.error('Model load failed', error);
+        showToast('Failed to load model', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
+}
+
+async function swapModelPrompt(button) {
+    const targetModel = prompt('Enter the target model to swap to');
+    if (!targetModel) return;
+
+    try {
+        setButtonLoading(button, true, 'Swapping...');
+        const data = await apiRequest('/api/models/swap', {
+            method: 'POST',
+            body: JSON.stringify({
+                source_model: currentModel || 'unknown',
+                target_model: targetModel
+            })
+        });
+
+        updateModelIndicator(data.model, false);
+        addMessage('system', data.message);
+        showToast('Model swapped', 'success');
+    } catch (error) {
+        console.error('Model swap failed', error);
+        showToast('Failed to swap model', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
+}
+
+function openModelAblation(button) {
+    setButtonLoading(button, true, 'Preparing...');
     showModal('model-ablation-modal');
     initializeAblationControls();
+    setButtonLoading(button, false);
 }
 
 function initializeAblationControls() {
@@ -992,57 +1093,116 @@ function updateAblationWarning(level) {
     }
 }
 
-function applyAblation() {
+async function applyAblation(button) {
     const level = document.getElementById('censorship-level').value;
     const contentFilter = document.getElementById('bypass-content-filter').checked;
     const ethicalConstraints = document.getElementById('bypass-ethical-constraints').checked;
     const refusalTraining = document.getElementById('bypass-refusal-training').checked;
     const method = document.getElementById('ablation-method').value;
-    
-    // Show loading animation
-    showToast('Applying model ablation...', 'info');
-    
-    // Simulate ablation process
-    setTimeout(() => {
-        showToast(`Model ablation applied! Level: ${level}%, Method: ${method}`, 'success');
+
+    const payload = {
+        model: currentModel,
+        level: Number(level),
+        content_filter: contentFilter,
+        ethical_constraints: ethicalConstraints,
+        refusal_training: refusalTraining,
+        method
+    };
+
+    try {
+        setButtonLoading(button, true, 'Ablating...');
+        const data = await apiRequest('/api/models/ablate', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+
+        updateModelIndicator(data.model, true);
+        addMessage('system', `Ablation applied to ${data.model} at ${data.level}% using ${data.method}.`);
         closeModal('model-ablation-modal');
-        
-        // Update model indicator to show ablated state
-        const modelIndicator = document.getElementById('current-model');
-        modelIndicator.textContent = 'test_model.gguf (Ablated)';
-        modelIndicator.style.color = 'var(--neon-pink)';
-    }, 3000);
+        showToast('Model ablation applied', 'success');
+    } catch (error) {
+        console.error('Ablation failed', error);
+        showToast('Failed to apply ablation', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
 }
 
 // Multi-Model Comparison
-function openModelComparison() {
+function openModelComparison(button) {
+    setButtonLoading(button, true, 'Opening...');
     showModal('model-comparison-modal');
+    setButtonLoading(button, false);
 }
 
-function toggleModelComparison() {
-    openModelComparison();
+function toggleModelComparison(button) {
+    openModelComparison(button);
 }
 
-function startComparison() {
+async function startComparison(button) {
     const selectedModels = [];
     const modelCheckboxes = document.querySelectorAll('#model-comparison-modal input[type="checkbox"]:checked');
-    
+
     modelCheckboxes.forEach(checkbox => {
         if (checkbox.id.startsWith('model-')) {
             selectedModels.push(checkbox.nextElementSibling.textContent);
         }
     });
-    
+
     if (selectedModels.length < 2) {
         showToast('Please select at least 2 models for comparison', 'error');
         return;
     }
-    
-    showToast(`Starting comparison with ${selectedModels.length} models...`, 'info');
-    closeModal('model-comparison-modal');
-    
-    // Initialize comparison interface
-    initializeComparisonInterface(selectedModels);
+
+    const metrics = [];
+    document.querySelectorAll('.metric-toggle input:checked').forEach(toggle => metrics.push(toggle.id));
+    const promptText = prompt('Enter a prompt to compare across models (optional)', '') || 'General capabilities check';
+
+    try {
+        setButtonLoading(button, true, 'Comparing...');
+        const data = await apiRequest('/api/models/compare', {
+            method: 'POST',
+            body: JSON.stringify({
+                models: selectedModels,
+                metrics,
+                prompt: promptText
+            })
+        });
+
+        renderComparisonResults(data.results);
+        showToast('Comparison complete', 'success');
+    } catch (error) {
+        console.error('Comparison failed', error);
+        showToast('Failed to run comparison', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
+}
+
+function renderComparisonResults(results) {
+    const resultsContainer = document.getElementById('comparison-results');
+
+    if (!resultsContainer) {
+        addMessage('system', 'Comparison results received.');
+        return;
+    }
+
+    if (!results || results.length === 0) {
+        resultsContainer.innerHTML = '<p>No comparison data returned.</p>';
+        return;
+    }
+
+    resultsContainer.innerHTML = results.map(result => `
+        <div class="comparison-result-row">
+            <div class="comparison-model">${result.model}</div>
+            <div class="comparison-metrics">
+                ${Object.entries(result.metrics).map(([metric, value]) => `
+                    <span class="metric-pill">${metric}: ${value}</span>
+                `).join('')}
+            </div>
+            <div class="comparison-notes">${result.notes}</div>
+        </div>
+    `).join('');
 }
 
 function initializeComparisonInterface(models) {
@@ -1085,12 +1245,29 @@ function exitComparison() {
 }
 
 // Performance Analytics
-function togglePerformanceAnalytics() {
-    openPerformanceAnalytics();
+function togglePerformanceAnalytics(button) {
+    openPerformanceAnalytics(button);
 }
 
-function openPerformanceAnalytics() {
-    // Create analytics modal
+async function openPerformanceAnalytics(button) {
+    try {
+        setButtonLoading(button, true, 'Loading analytics...');
+        const data = await apiRequest('/api/analytics');
+        renderPerformanceAnalyticsModal(data);
+    } catch (error) {
+        console.error('Analytics fetch failed', error);
+        showToast('Failed to load analytics', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
+}
+
+function renderPerformanceAnalyticsModal(data) {
+    const existing = document.getElementById('performance-analytics-modal');
+    if (existing) {
+        existing.remove();
+    }
+
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'performance-analytics-modal';
@@ -1106,25 +1283,25 @@ function openPerformanceAnalytics() {
                 <div class="analytics-dashboard">
                     <div class="analytics-grid">
                         <div class="analytics-card">
-                            <h4>Response Time</h4>
-                            <div class="metric-value">1.2s</div>
-                            <div class="metric-trend up">↗ 15% faster</div>
+                            <h4>Average Response Time</h4>
+                            <div class="metric-value">${data.avg_response_time_ms} ms</div>
                         </div>
                         <div class="analytics-card">
-                            <h4>Token Generation</h4>
-                            <div class="metric-value">45 t/s</div>
-                            <div class="metric-trend up">↗ 8% improvement</div>
+                            <h4>Token Rate</h4>
+                            <div class="metric-value">${data.token_rate} t/s</div>
                         </div>
                         <div class="analytics-card">
                             <h4>Memory Usage</h4>
-                            <div class="metric-value">2.1 GB</div>
-                            <div class="metric-trend down">↘ 5% reduction</div>
+                            <div class="metric-value">${data.memory_usage_gb} GB</div>
                         </div>
                         <div class="analytics-card">
-                            <h4>Quality Score</h4>
-                            <div class="metric-value">94%</div>
-                            <div class="metric-trend up">↗ 2% increase</div>
+                            <h4>Requests Served</h4>
+                            <div class="metric-value">${data.requests}</div>
                         </div>
+                    </div>
+                    <div class="analytics-summary">
+                        <p>Uptime: ${data.uptime}</p>
+                        <p>Current Model: ${currentModel || 'unknown'}</p>
                     </div>
                     <div class="analytics-chart">
                         <canvas id="performance-chart" width="800" height="400"></canvas>
@@ -1133,11 +1310,9 @@ function openPerformanceAnalytics() {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
     showModal('performance-analytics-modal');
-    
-    // Initialize performance chart
     initializePerformanceChart();
 }
 
@@ -1174,44 +1349,118 @@ function initializePerformanceChart() {
 }
 
 // Advanced Feature Functions
-function openModelTraining() {
+function openModelTraining(button) {
+    setButtonLoading(button, true, 'Preparing...');
     showToast('Real-time fine-tuning interface coming soon!', 'info');
+    setButtonLoading(button, false);
 }
 
-function openModelAnalytics() {
-    openPerformanceAnalytics();
+function openModelAnalytics(button) {
+    openPerformanceAnalytics(button);
 }
 
-function openConversationBranching() {
-    showToast('Conversation branching feature coming soon!', 'info');
+async function openConversationBranching(button) {
+    const branchName = prompt('Name for the new branch', 'What-if exploration');
+
+    try {
+        setButtonLoading(button, true, 'Branching...');
+        const data = await apiRequest('/api/conversations/branch', {
+            method: 'POST',
+            body: JSON.stringify({
+                conversation_id: 'active',
+                branch_name: branchName
+            })
+        });
+
+        addMessage('system', `Created branch ${data.branch.name} from conversation ${data.branch.from}.`);
+        showToast('Branch created', 'success');
+    } catch (error) {
+        console.error('Branching failed', error);
+        showToast('Failed to create branch', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
 }
 
-function openMemoryManagement() {
-    showToast('Advanced memory management coming soon!', 'info');
+async function openMemoryManagement(button) {
+    try {
+        setButtonLoading(button, true, 'Inspecting...');
+        const data = await apiRequest('/api/conversations/state?conversation_id=active');
+        renderConversationState(data);
+        showToast('Conversation state loaded', 'success');
+    } catch (error) {
+        console.error('Memory inspection failed', error);
+        showToast('Failed to inspect memory', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
 }
 
-function openContextAnalysis() {
-    showToast('Context analysis tools coming soon!', 'info');
+async function openContextAnalysis(button) {
+    try {
+        setButtonLoading(button, true, 'Analyzing...');
+        const data = await apiRequest('/api/conversations/state?conversation_id=active');
+        renderConversationState(data, 'Context analysis complete');
+        showToast('Context analyzed', 'success');
+    } catch (error) {
+        console.error('Context analysis failed', error);
+        showToast('Failed to analyze context', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
 }
 
-function openConversationExport() {
+function openConversationExport(button) {
+    setButtonLoading(button, true, 'Preparing...');
     showToast('Export/Import system coming soon!', 'info');
+    setButtonLoading(button, false);
 }
 
-function openPromptTemplates() {
-    showToast('Advanced prompt templates coming soon!', 'info');
+async function openPromptTemplates(button) {
+    await triggerPromptTool(button, 'templates', 'Template suggestions ready');
 }
 
-function openPersonalityInjection() {
-    showToast('Personality injection system coming soon!', 'info');
+async function openPersonalityInjection(button) {
+    await triggerPromptTool(button, 'personalities', 'Personality presets ready');
 }
 
-function openPromptOptimizer() {
-    showToast('Prompt optimizer coming soon!', 'info');
+async function openPromptOptimizer(button) {
+    await triggerPromptTool(button, 'optimizations', 'Optimization suggestions ready');
 }
 
-function openChainOfThought() {
-    showToast('Chain-of-thought reasoning coming soon!', 'info');
+async function openChainOfThought(button) {
+    await triggerPromptTool(button, 'optimizations', 'Chain-of-thought helpers ready');
+}
+
+function renderConversationState(data, prefixMessage = 'Conversation state fetched') {
+    const memorySummary = (data.memory || []).map(item => `${item.type}: ${item.content}`).join(' | ');
+    const branchSummary = (data.branches || []).map(branch => branch.name).join(', ') || 'No branches';
+    addMessage('system', `${prefixMessage}. Memory: ${memorySummary}. Branches: ${branchSummary}. Model: ${data.model}${data.ablated ? ' (Ablated)' : ''}`);
+}
+
+async function triggerPromptTool(button, tool, successToast) {
+    const promptText = prompt('Enter prompt context for this tool', '') || 'General assistance';
+
+    try {
+        setButtonLoading(button, true, 'Fetching...');
+        const data = await apiRequest('/api/prompts/tools', {
+            method: 'POST',
+            body: JSON.stringify({ tool, prompt: promptText })
+        });
+
+        renderPromptSuggestions(tool, data.suggestions, promptText);
+        showToast(successToast, 'success');
+    } catch (error) {
+        console.error('Prompt tool failed', error);
+        showToast('Failed to fetch prompt tools', 'error');
+    } finally {
+        setButtonLoading(button, false);
+    }
+}
+
+function renderPromptSuggestions(tool, suggestions, promptText) {
+    const readable = suggestions && suggestions.length > 0 ? suggestions.join(' | ') : 'No suggestions available';
+    addMessage('system', `${tool} suggestions for "${promptText}": ${readable}`);
 }
 
 function openEmotionDetection() {

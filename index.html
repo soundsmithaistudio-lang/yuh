@@ -31,11 +31,11 @@
                         <i class="fas fa-brain"></i>
                     </button>
                     
-                    <button class="header-btn" onclick="toggleModelComparison()" title="Multi-Model Comparison">
+                    <button class="header-btn" onclick="toggleModelComparison(this)" title="Multi-Model Comparison">
                         <i class="fas fa-layer-group"></i>
                     </button>
-                    
-                    <button class="header-btn" onclick="togglePerformanceAnalytics()" title="Performance Analytics">
+
+                    <button class="header-btn" onclick="togglePerformanceAnalytics(this)" title="Performance Analytics">
                         <i class="fas fa-chart-line"></i>
                     </button>
                     
@@ -68,19 +68,27 @@
                     </div>
                     <div class="section-content" id="model-management">
                         <div class="model-controls">
-                            <button class="advanced-btn" onclick="openModelAblation()">
+                            <button class="advanced-btn" onclick="loadModelPrompt(this)">
+                                <i class="fas fa-download"></i>
+                                <span>Load Model</span>
+                            </button>
+                            <button class="advanced-btn" onclick="swapModelPrompt(this)">
+                                <i class="fas fa-exchange-alt"></i>
+                                <span>Swap Model</span>
+                            </button>
+                            <button class="advanced-btn" onclick="openModelAblation(this)">
                                 <i class="fas fa-unlock"></i>
                                 <span>Model Ablation (Uncensor)</span>
                             </button>
-                            <button class="advanced-btn" onclick="openModelComparison()">
+                            <button class="advanced-btn" onclick="openModelComparison(this)">
                                 <i class="fas fa-layer-group"></i>
                                 <span>Multi-Model Comparison</span>
                             </button>
-                            <button class="advanced-btn" onclick="openModelTraining()">
+                            <button class="advanced-btn" onclick="openModelTraining(this)">
                                 <i class="fas fa-graduation-cap"></i>
                                 <span>Real-time Fine-tuning</span>
                             </button>
-                            <button class="advanced-btn" onclick="openModelAnalytics()">
+                            <button class="advanced-btn" onclick="openModelAnalytics(this)">
                                 <i class="fas fa-chart-pie"></i>
                                 <span>Performance Analytics</span>
                             </button>
@@ -96,19 +104,19 @@
                         <i class="fas fa-chevron-down section-arrow"></i>
                     </div>
                     <div class="section-content" id="conversation-management">
-                        <button class="advanced-btn" onclick="openConversationBranching()">
+                        <button class="advanced-btn" onclick="openConversationBranching(this)">
                             <i class="fas fa-code-branch"></i>
                             <span>Conversation Branching</span>
                         </button>
-                        <button class="advanced-btn" onclick="openMemoryManagement()">
+                        <button class="advanced-btn" onclick="openMemoryManagement(this)">
                             <i class="fas fa-memory"></i>
                             <span>Memory Management</span>
                         </button>
-                        <button class="advanced-btn" onclick="openContextAnalysis()">
+                        <button class="advanced-btn" onclick="openContextAnalysis(this)">
                             <i class="fas fa-search"></i>
                             <span>Context Analysis</span>
                         </button>
-                        <button class="advanced-btn" onclick="openConversationExport()">
+                        <button class="advanced-btn" onclick="openConversationExport(this)">
                             <i class="fas fa-download"></i>
                             <span>Export/Import</span>
                         </button>
@@ -123,19 +131,19 @@
                         <i class="fas fa-chevron-down section-arrow"></i>
                     </div>
                     <div class="section-content" id="prompt-engineering">
-                        <button class="advanced-btn" onclick="openPromptTemplates()">
+                        <button class="advanced-btn" onclick="openPromptTemplates(this)">
                             <i class="fas fa-file-alt"></i>
                             <span>Advanced Templates</span>
                         </button>
-                        <button class="advanced-btn" onclick="openPersonalityInjection()">
+                        <button class="advanced-btn" onclick="openPersonalityInjection(this)">
                             <i class="fas fa-user-cog"></i>
                             <span>Personality Injection</span>
                         </button>
-                        <button class="advanced-btn" onclick="openPromptOptimizer()">
+                        <button class="advanced-btn" onclick="openPromptOptimizer(this)">
                             <i class="fas fa-rocket"></i>
                             <span>Prompt Optimizer</span>
                         </button>
-                        <button class="advanced-btn" onclick="openChainOfThought()">
+                        <button class="advanced-btn" onclick="openChainOfThought(this)">
                             <i class="fas fa-link"></i>
                             <span>Chain-of-Thought</span>
                         </button>
@@ -282,7 +290,7 @@
                             <p>Warning: Model ablation may produce unfiltered content. Use responsibly.</p>
                         </div>
 
-                        <button class="advanced-btn primary" onclick="applyAblation()">
+                        <button class="advanced-btn primary" onclick="applyAblation(this)">
                             <i class="fas fa-magic"></i>
                             Apply Ablation
                         </button>
@@ -346,7 +354,11 @@
                             </div>
                         </div>
 
-                        <button class="advanced-btn primary" onclick="startComparison()">
+                        <div class="comparison-results" id="comparison-results">
+                            <p>Select metrics and start a run to see results here.</p>
+                        </div>
+
+                        <button class="advanced-btn primary" onclick="startComparison(this)">
                             <i class="fas fa-play"></i>
                             Start Comparison
                         </button>
